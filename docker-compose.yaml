@@ -1,0 +1,46 @@
+version: "3"
+services:
+
+  zookeeper:
+    container_name: zookeeper
+    image: debezium/zookeeper:1.2
+    restart: always
+    ports:
+      - 2181:2181
+      - 2888:2888
+      - 3888:3888
+
+  kafka:
+    container_name: kafka
+    image: debezium/kafka:1.2
+    restart: always
+    ports:
+      - 9092:9092
+    environment:
+      BROKER_ID: 1
+      ZOOKEEPER_CONNECT: zookeeper:2181
+      ADVERTISED_HOST_NAME: ${HOST_IP} #export HOST_IP=$(ifconfig | grep -E "([0-9]{1,3}\.){3}[0-9]{1,3}" | grep -v 127.0.0.1 | awk '{ print $2 }' | cut -f2 -d: | head -n1)
+    links:
+      - zookeeper
+    depends_on:
+      - zookeeper
+
+  connect:
+    container_name: debezium
+    image: debezium/connect:1.2
+    ports:
+      - 8083:8083
+    links:
+      - kafka
+      - zookeeper
+    depends_on:
+      - kafka
+      - zookeeper
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: my_connect_configs
+      OFFSET_STORAGE_TOPIC: my_connect_offsets
+      STATUS_STORAGE_TOPIC: my_connect_statuses
+
+
